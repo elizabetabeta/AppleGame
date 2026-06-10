@@ -58,7 +58,7 @@ class GameScene extends Phaser.Scene {
     this.player.body.allowGravity = false;
     this.player.setCollideWorldBounds(true);
     this.player.setSize(this.player.width-this.player.width/4, this.player.height/6).
-      setOffset(this.player.width/10, this.player.height - this.player.height/10);
+      setOffset(this.player.width/10, this.player.height - this.player.height/3);
 
     this.target = this.physics.add
       .image(0,0,"apple")
@@ -155,7 +155,7 @@ const config = {
     default: "arcade",
     arcade: {
       gravity: { y: speedDown },
-      debug: true,
+      debug: false,
     },
   },
   scene: [GameScene],
