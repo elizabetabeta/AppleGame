@@ -3,8 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.ico" />
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.0/dist/confetti.browser.min.js"></script>
     <script src="https://kit.fontawesome.com/40e4cc9236.js" crossorigin="anonymous"></script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="true">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Apple Catcher</title>
   </head>
   <body>
@@ -25,8 +28,14 @@
         <p>Game Over</p>
         <h1>You <span id="gameWinLoseSpan"></span></h1>
         <h1>Final Score: <span id="gameEndScoreSpan"></span></h1>
-        <p>Refresh the Page to play again</p>
-      </div>
+
+        <button id="installBtn">
+          <p>Install Now</p>
+        </button>
+
+        <button id="gameEndBtn">
+          <p>Try Again</p>
+        </button>
       </div>
     </main>
     <footer>

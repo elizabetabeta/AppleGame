@@ -14,6 +14,7 @@
 html,
 body {
   height: 100%;
+  width: 100%;
 }
 
 body {
@@ -29,25 +30,40 @@ footer {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 40px 20px;
+  padding: 20px 10px;
+  text-align: center;
+}
+
+header p,
+footer p {
+  font-size: clamp(0.9rem, 2vw, 1.1rem);
 }
 
 main {
   flex: 1;
   display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 10px;
+  overflow: hidden;
 }
 
 #gameCanvas {
-  border: 1px solid red;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  z-index: 1;
+  border: 2px solid var(--accClr);
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+  /* Maintain aspect ratio */
+  aspect-ratio: 1 / 1;
+  width: min(90vw, 90vh);
+  height: min(90vw, 90vh);
 }
 
- .gameUI {
+.gameUI {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   background-color: var(--accClr);
@@ -55,12 +71,25 @@ main {
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  padding: 20px;
   z-index: 2;
+  overflow-y: auto;
 }
 
 .gameUI * {
   text-align: center;
-  margin-top: 5px;
+  margin: 10px auto;
+  max-width: 90%;
+}
+
+.gameUI h1 {
+  font-size: clamp(1.5rem, 6vw, 3rem);
+  margin: 15px auto;
+}
+
+.gameUI p {
+  font-size: clamp(0.9rem, 3vw, 1.1rem);
+  line-height: 1.5;
 }
 
 #gameStartDiv {
@@ -71,23 +100,59 @@ main {
   display: none;
 }
 
-#gameStartBtn{
+#gameStartBtn,
+#gameEndBtn {
   display: inline-block;
-  width: 100px;
-  padding:8px 15px;
-  margin: 20px 0;
-  text-align: center;
+  width: clamp(80px, 25vw, 150px);
+  padding: clamp(8px, 2vw, 15px) clamp(15px, 4vw, 25px);
+  margin: 20px auto;
   font-family: inherit;
-  border-radius: 10px;;
-}
-
-#gameStartBtn p{
-  margin-top: 0;
-}
-
-#gameStartBtn:hover{
-  background-color: var(--dkClr);
-  border: 0.5px solid var(--liClr);
+  font-size: clamp(0.9rem, 2vw, 1.1rem);
+  border-radius: 10px;
+  background-color: var(--accClr);
   color: var(--liClr);
-  cursor:pointer;
-} 
+  border: 1px solid var(--liClr);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+#gameStartBtn p,
+#gameEndBtn p {
+  margin: 0;
+  text-transform: uppercase;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+#gameStartBtn:hover,
+#gameEndBtn:hover {
+  background-color: var(--liClr);
+  color: var(--dkClr);
+  transform: scale(1.05);
+}
+
+#gameStartBtn:active,
+#gameEndBtn:active {
+  transform: scale(0.95);
+}
+
+/* Mobile optimization */
+@media (max-width: 600px) {
+  header,
+  footer {
+    padding: 15px 10px;
+  }
+
+  main {
+    padding: 5px;
+  }
+
+  .gameUI {
+    padding: 15px;
+  }
+
+  #gameCanvas {
+    border-width: 1px;
+  }
+}
