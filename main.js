@@ -2,96 +2,54 @@ import "./style.css";
 import Phaser from "phaser";
 
 const sizes = {
-  width: 800,
-  height: 900,
+  width: 500,
+  height: 500,
 };
 
-const GRID_SIZE = 4;
-const TILE_SIZE = 150;
-const TILE_PADDING = 10;
-const GRID_OFFSET_X = (sizes.width - GRID_SIZE * (TILE_SIZE + TILE_PADDING)) / 2;
-const GRID_OFFSET_Y = 150;
+const speedDown = 300;
 
 const gameStartDiv = document.querySelector("#gameStartDiv");
 const gameStartBtn = document.querySelector("#gameStartBtn");
 const gameEndDiv = document.querySelector("#gameEndDiv");
-const gameEndBtn = document.querySelector("#gameEndBtn");
+const gameEndBtn = document.querySelector("#gameEndBtn"); 
 const gameWinLoseSpan = document.querySelector("#gameWinLoseSpan");
 const gameEndScoreSpan = document.querySelector("#gameEndScoreSpan");
 
-class MergeGameScene extends Phaser.Scene {
+class GameScene extends Phaser.Scene {
   constructor() {
-    super("merge-game");
-    this.grid = [];
-    this.tiles = [];
-    this.score = 0;
-    this.textScore = null;
-    this.selectedTile = null;
-    this.canInteract = true;
-    this.mergeSound = null;
-    this.moveSound = null;
-    this.bgMusic = null;
-    this.nextId = 1;
-    this.egg = null;
-    this.eggUses = 5;
-    this.eggUsesText = null;
+    super("scene-game");
+    this.player;
+    this.cursor;
+    this.playerSpeed = speedDown + 100;
+    this.target;
+    this.points = 0;
+    this.textScore;
+    this.textTime;
+    this.timedEvent;
+    this.remainingTime;
+    this.coinMusic;
+    this.bgMusic;
+    this.emitter;
   }
 
   preload() {
-    this.load.image("tile1", "/assets/tile1.png");
-    this.load.image("tile2", "/assets/tile2.png");
-    this.load.image("tile3", "/assets/tile3.png");
-    this.load.image("tile4", "/assets/tile4.png");
-    this.load.image("tile5", "/assets/tile5.png");
-    this.load.image("tile6", "/assets/tile6.png");
-    this.load.image("tile7", "/assets/tile7.png");
-    this.load.image("egg", "/assets/egg.png");
-    
-    this.load.audio("merge", "/assets/merge.mp3");
-    this.load.audio("move", "/assets/move.mp3");
+    this.load.image("bg", "/assets/bg.png");
+    this.load.image("basket", "/assets/basket.png");
+    this.load.image("apple", "/assets/apple.png");
+    this.load.image("sparkle", "/assets/sparkle.png");
+    this.load.audio("coin", "/assets/coin.mp3");
     this.load.audio("bgMusic", "/assets/bgMusic.mp3");
   }
 
   create() {
-    this.score = 0;
-    this.nextId = 1;
-    this.canInteract = true;
-    this.eggUses = 5;
+    // Reset points when the scene creates/restarts
+    this.points = 0;
 
-    // Background
-    this.add.rectangle(sizes.width / 2, sizes.height / 2, sizes.width, sizes.height, 0x2c3e50);
+    this.targets = this.physics.add.group();
 
-    // Title
-    this.add.text(sizes.width / 2, 40, "MERGE GAME", {
-      font: "bold 40px Arial",
-      fill: "#ffffff",
-      align: "center"
-    }).setOrigin(0.5);
-
-    // Score display
-    this.textScore = this.add.text(sizes.width / 2, 90, "Score: 0", {
-      font: "28px Arial",
-      fill: "#ffd700",
-      align: "center"
-    }).setOrigin(0.5);
-
-    // Grid background
-    this.add.rectangle(
-      GRID_OFFSET_X + (GRID_SIZE * (TILE_SIZE + TILE_PADDING)) / 2,
-      GRID_OFFSET_Y + (GRID_SIZE * (TILE_SIZE + TILE_PADDING)) / 2,
-      GRID_SIZE * (TILE_SIZE + TILE_PADDING),
-      GRID_SIZE * (TILE_SIZE + TILE_PADDING),
-      0x1a252f
-    );
-
-    // Initialize grid
-    this.grid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null));
-    this.tiles = [];
-
-    // Audio
-    this.mergeSound = this.sound.add("merge");
-    this.moveSound = this.sound.add("move");
+    this.coinMusic = this.sound.add("coin");
     
+    // Only play background music if it isn't already playing (stops music overlapping on restart)
     if (!this.sound.get("bgMusic")) {
       this.bgMusic = this.sound.add("bgMusic");
       this.bgMusic.play({ loop: true });
@@ -99,370 +57,156 @@ class MergeGameScene extends Phaser.Scene {
       this.bgMusic = this.sound.get("bgMusic");
     }
 
-    // Create egg
-    this.createEgg();
+    this.add.image(0, 0, "bg").setOrigin(0, 0);
+    this.player = this.physics.add
+      .image(0, sizes.height - 100, "basket")
+      .setOrigin(0, 0);
+    this.player.setImmovable(true);
+    this.player.body.allowGravity = false;
+    this.player.setCollideWorldBounds(true);
+    this.player.setSize(this.player.width - this.player.width / 4, this.player.height / 6).
+      setOffset(this.player.width / 10, this.player.height - this.player.height / 3);
 
-    // Add starting tiles
-    this.spawnNewTile();
-    this.spawnNewTile();
-  }
+    this.target = this.physics.add
+      .image(0, 0, "apple")
+      .setOrigin(0, 0);
+    this.target.setMaxVelocity(0, speedDown);
 
-  createEgg() {
-    const eggX = sizes.width - 80;
-    const eggY = GRID_OFFSET_Y + 50;
-
-    this.egg = this.add.container(eggX, eggY);
+    this.physics.add.overlap(this.target, this.player, this.targetHit, null, this);
     
-    const eggImage = this.add.image(0, 0, "egg");
-    eggImage.setDisplaySize(60, 60);
+    this.cursor = this.input.keyboard.createCursorKeys();
 
-    this.eggUsesText = this.add.text(0, 0, this.eggUses.toString(), {
-      font: "bold 20px Arial",
-      fill: "#ffffff",
-      align: "center"
-    }).setOrigin(0.5);
-
-    this.egg.add(eggImage);
-    this.egg.add(this.eggUsesText);
-
-    this.egg.setInteractive(
-      new Phaser.Geom.Circle(0, 0, 35),
-      Phaser.Geom.Circle.Contains
-    );
-
-    this.egg.on("pointerdown", () => {
-      this.clickEgg();
+    this.input.on('pointermove', (pointer) => {
+      this.player.x = Phaser.Math.Clamp(
+        pointer.x - this.player.width / 2,
+        0,
+        sizes.width - this.player.width
+      );
     });
 
-    this.egg.on("pointerover", () => {
-      this.tweens.add({
-        targets: this.egg,
-        scale: 1.1,
-        duration: 100
-      });
+    this.textScore = this.add.text(sizes.width - 120, 10, "Score: 0", {
+      font: "25px Arial",
+      fill: "#000000",
     });
 
-    this.egg.on("pointerout", () => {
-      this.tweens.add({
-        targets: this.egg,
-        scale: 1,
-        duration: 100
-      });
-    });
-  }
-
-  clickEgg() {
-    if (this.eggUses <= 0) return;
-
-    this.eggUses--;
-    this.eggUsesText.setText(this.eggUses.toString());
-
-    // Spawn a new tile1 in a random empty cell
-    this.spawnNewTile();
-
-    // Egg animation
-    this.tweens.add({
-      targets: this.egg,
-      scale: { from: 1, to: 0.9 },
-      duration: 150,
-      yoyo: true
+    this.textTime = this.add.text(10, 10, "Remaining Time: 00", {
+      font: "25px Arial",
+      fill: "#000000",
     });
 
-    // Remove egg if out of uses
-    if (this.eggUses <= 0) {
-      this.tweens.add({
-        targets: this.egg,
-        alpha: 0.5,
-        duration: 300
-      });
-      this.egg.disableInteractive();
-    }
+    this.timedEvent = this.time.delayedCall(30000, this.gameOver, [], this);
+  
+    this.emitter = this.add.particles(0, 0, "sparkle", {
+      speed: 100,
+      gravityY: speedDown - 200,
+      scale: 0.04,
+      duration: 100,
+      emitting: false
+    });
+    this.emitter.startFollow(this.player, this.player.width / 2, this.player.height / 2, true);
+
   }
 
   update() {
-    this.tiles.forEach(tile => {
-      if (tile.targetX !== undefined) {
-        tile.graphics.x = Phaser.Math.Linear(tile.graphics.x, tile.targetX, 0.15);
-        tile.graphics.y = Phaser.Math.Linear(tile.graphics.y, tile.targetY, 0.15);
-      }
-    });
+    this.remainingTime = this.timedEvent.getRemainingSeconds();
+    this.textTime.setText(`Remaining Time: ${Math.round(this.remainingTime).toString()}`);
+
+    if (this.target.y >= sizes.height) {
+      this.target.setY(0);
+      this.target.setX(this.getRandomX());
+    }
+
+    const { left, right } = this.cursor;
+
+    if (left.isDown) {
+      this.player.setVelocityX(-this.playerSpeed);
+    } else if (right.isDown) {
+      this.player.setVelocityX(this.playerSpeed);
+    } else {
+      this.player.setVelocityX(0);
+    }
   }
 
-  spawnNewTile() {
-    const emptyCells = [];
-    for (let row = 0; row < GRID_SIZE; row++) {
-      for (let col = 0; col < GRID_SIZE; col++) {
-        if (this.grid[row][col] === null) {
-          emptyCells.push({ row, col });
+  getRandomX() {
+    return Math.floor(Math.random() * 480);
+  }
+
+  targetHit() {
+    this.coinMusic.play();
+    this.emitter.start();
+
+    const hitX = this.target.x;
+    const hitY = this.target.y;
+
+    const plusOne = this.add.text(
+        hitX,
+        hitY,
+        "+1",
+        {
+          fontSize: "24px",
+          color: "#00ff00",
+          fontStyle: "bold"
         }
-      }
-    }
-
-    if (emptyCells.length === 0) {
-      this.endGame();
-      return;
-    }
-
-    const { row, col } = Phaser.Utils.Array.GetRandom(emptyCells);
-    const level = Math.random() < 0.9 ? 1 : 2; 
-    this.createTile(row, col, level);
-  }
-
-  createTile(row, col, level) {
-    const x = GRID_OFFSET_X + col * (TILE_SIZE + TILE_PADDING) + TILE_SIZE / 2;
-    const y = GRID_OFFSET_Y + row * (TILE_SIZE + TILE_PADDING) + TILE_SIZE / 2;
-
-    const tileGraphics = this.add.container(x, y);
-    
-    // Make the container interactive
-    tileGraphics.setInteractive(
-      new Phaser.Geom.Rectangle(
-        -(TILE_SIZE - TILE_PADDING) / 2,
-        -(TILE_SIZE - TILE_PADDING) / 2,
-        TILE_SIZE - TILE_PADDING,
-        TILE_SIZE - TILE_PADDING
-      ),
-      Phaser.Geom.Rectangle.Contains
-    );
-
-    const tileAsset = `tile${level}`;
-    const tileImage = this.add.image(0, 0, tileAsset);
-    tileImage.setDisplaySize(TILE_SIZE - TILE_PADDING, TILE_SIZE - TILE_PADDING);
-
-    const levelText = this.add.text(0, 0, level.toString(), {
-      font: "bold 32px Arial",
-      fill: "#ffffff",
-      align: "center"
-    }).setOrigin(0.5);
-
-    tileGraphics.add(tileImage);
-    tileGraphics.add(levelText);
+      );
 
     this.tweens.add({
-      targets: tileGraphics,
-      scale: { from: 0.5, to: 1 },
-      duration: 200,
-      ease: "Back.out"
+        targets: plusOne,
+        y: hitY - 50,
+        alpha: 0,
+        duration: 500,
+        onComplete: () => plusOne.destroy()
     });
-
-    const tileObject = {
-      id: this.nextId++,
-      level,
-      row,
-      col,
-      graphics: tileGraphics,
-      image: tileImage,
-      text: levelText,
-      targetX: x,
-      targetY: y,
-      isNew: true
-    };
-
-    // Add click listener directly to the container
-    tileGraphics.on("pointerdown", () => {
-      this.handleTileClick(tileObject);
-    });
-
-    this.grid[row][col] = tileObject;
-    this.tiles.push(tileObject);
-  }
-
-  handleTileClick(clickedTile) {
-    if (!this.canInteract) return;
-
-    if (this.selectedTile === null) {
-      this.selectedTile = clickedTile;
-      this.highlightTile(clickedTile);
-    } else if (this.selectedTile.id === clickedTile.id) {
-      this.unhighlightTile(clickedTile);
-      this.selectedTile = null;
-    } else {
-      this.attemptMergeOrSwap(this.selectedTile, clickedTile);
-      this.unhighlightTile(this.selectedTile);
-      this.selectedTile = null;
-    }
-  }
-
-  highlightTile(tile) {
-    this.tweens.add({
-      targets: tile.graphics,
-      scale: 1.15,
-      duration: 150,
-      ease: "Power2.out"
-    });
-  }
-
-  unhighlightTile(tile) {
-    this.tweens.add({
-      targets: tile.graphics,
-      scale: 1,
-      duration: 150,
-      ease: "Power2.out"
-    });
-  }
-
-  attemptMergeOrSwap(tile1, tile2) {
-    if (tile1.level === tile2.level) {
-      this.mergeTiles(tile1, tile2);
-    } else {
-      this.swapTiles(tile1, tile2);
-    }
-  }
-
-  mergeTiles(tile1, tile2) {
-    this.canInteract = false;
-
-    // Clean out tile1's old grid coordinates so the space is marked empty
-    this.grid[tile1.row][tile1.col] = null;
-    
-    this.tiles = this.tiles.filter(t => t.id !== tile1.id);
-    
-    const explodeX = tile1.graphics.x;
-    const explodeY = tile1.graphics.y;
 
     this.tweens.add({
-      targets: tile1.graphics,
-      scale: 0,
-      alpha: 0,
-      duration: 200,
-      ease: "Power2.in",
-      onComplete: () => {
-        tile1.graphics.destroy();
-      }
-    });
-
-    tile2.level++;
-    this.updateTileGraphics(tile2);
-    // Make sure tile2 stays in the grid with updated reference
-    this.grid[tile2.row][tile2.col] = tile2;
-    
-    this.score += Math.pow(2, tile2.level);
-    this.textScore.setText(`Score: ${this.score}`);
-
-    this.tweens.add({
-      targets: tile2.graphics,
-      scale: { from: 1, to: 1.2 },
-      duration: 150,
-      ease: "Back.out",
+      targets: this.player,
+      scaleX: 1.1,
+      scaleY: 0.9,
+      duration: 100,
       yoyo: true
     });
 
-    this.mergeSound.play();
-    this.createParticles(explodeX, explodeY);
+    this.cameras.main.shake(100, 0.002);
 
-    if (tile2.level >= 7) {
-      this.time.delayedCall(500, () => {
-        this.winGame();
-      });
-    } else {
-      this.time.delayedCall(300, () => {
-        this.canInteract = true;
-        this.spawnNewTile();
-      });
-    }
-  }
-
-  swapTiles(tile1, tile2) {
-    this.moveSound.play();
+    this.target.setY(0);
+    this.target.setX(this.getRandomX());
+    this.points++;
+    this.textScore.setText(`Score: ${this.points}`);
     
-    [this.grid[tile1.row][tile1.col], this.grid[tile2.row][tile2.col]] = 
-    [this.grid[tile2.row][tile2.col], this.grid[tile1.row][tile1.col]];
-
-    [tile1.row, tile1.col, tile2.row, tile2.col] = 
-    [tile2.row, tile2.col, tile1.row, tile1.col];
-
-    const x1 = GRID_OFFSET_X + tile1.col * (TILE_SIZE + TILE_PADDING) + TILE_SIZE / 2;
-    const y1 = GRID_OFFSET_Y + tile1.row * (TILE_SIZE + TILE_PADDING) + TILE_SIZE / 2;
-    const x2 = GRID_OFFSET_X + tile2.col * (TILE_SIZE + TILE_PADDING) + TILE_SIZE / 2;
-    const y2 = GRID_OFFSET_Y + tile2.row * (TILE_SIZE + TILE_PADDING) + TILE_SIZE / 2;
-
-    tile1.targetX = x1;
-    tile1.targetY = y1;
-    tile2.targetX = x2;
-    tile2.targetY = y2;
   }
 
-  updateTileGraphics(tile) {
-    const newAsset = `tile${Math.min(tile.level, 7)}`;
-    tile.image.setTexture(newAsset);
-    tile.text.setText(tile.level.toString());
-  }
+  gameOver() {
+    this.scene.pause("scene-game");
 
-  createParticles(x, y) {
-    for (let i = 0; i < 8; i++) {
-      const angle = (i / 8) * Math.PI * 2;
-      const vx = Math.cos(angle) * 200;
-      const vy = Math.sin(angle) * 200;
+    const isWin = this.points >= 10;
 
-      const particle = this.add.rectangle(x, y, 10, 10, 0xffd700);
-      this.tweens.add({
-        targets: particle,
-        x: x + vx * 0.5,
-        y: y + vy * 0.5,
-        alpha: 0,
-        scale: 0,
-        duration: 400,
-        ease: "Power2.out",
-        onComplete: () => {
-          particle.destroy();
-        }
-      });
+    if (isWin) {
+      gameEndScoreSpan.textContent = this.points;
+      gameWinLoseSpan.textContent = "Win!";
+      this.triggerConfetti();
+    } else {
+      gameEndScoreSpan.textContent = this.points;
+      gameWinLoseSpan.innerHTML = 'Lose! <i class="fa-solid fa-face-frown"></i>'; 
     }
-  }
 
-  winGame() {
-    this.canInteract = false; 
-    gameWinLoseSpan.textContent = "You Win!";
-    gameEndScoreSpan.textContent = this.score;
     gameEndDiv.style.display = "flex";
-    this.triggerConfetti();
-  }
-
-  endGame() {
-    this.canInteract = false;
-    gameWinLoseSpan.textContent = "Game Over!";
-    gameEndScoreSpan.textContent = this.score;
-    gameEndDiv.style.display = "flex";
-    this.triggerSadFaces();
+    
   }
 
   triggerConfetti() {
-    if (typeof confetti === "function") {
-      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-      setTimeout(() => {
-        confetti({ particleCount: 50, spread: 100, origin: { y: 0.6 } });
-      }, 250);
-    } else {
-      console.log("Confetti system loaded successfully! Player wins!");
-    }
-  }
-
-  triggerSadFaces() {
-    const sadFaceCount = 10;
     
-    for (let i = 0; i < sadFaceCount; i++) {
-      const sadFace = this.add.text(
-        Phaser.Math.Between(0, sizes.width),
-        Phaser.Math.Between(-50, -100),
-        "☹️",
-        { fontSize: "48px" }
-      );
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 }
+    });
 
-      this.tweens.add({
-        targets: sadFace,
-        y: sizes.height + 50,
-        rotation: Phaser.Math.PI * 2,
-        duration: Phaser.Math.Between(2000, 3500),
-        delay: i * 100,
-        ease: "Linear",
-        onComplete: () => {
-          sadFace.destroy();
-          if (i === sadFaceCount - 1) {
-            this.scene.pause("merge-game");
-          }
-        }
+    setTimeout(() => {
+      confetti({
+        particleCount: 50,
+        spread: 100,
+        origin: { y: 0.6 }
       });
-    }
+    }, 250);
   }
 }
 
@@ -470,33 +214,49 @@ const config = {
   type: Phaser.WEBGL,
   width: sizes.width,
   height: sizes.height,
-  canvas: document.querySelector("#gameCanvas"),
+  canvas: document.querySelector("#gameCanvas"), // Added explicit element selection selector
   physics: {
     default: "arcade",
-    arcade: { debug: false },
+    arcade: {
+      gravity: { y: speedDown },
+      debug: false,
+    },
   },
-  scene: [MergeGameScene],
+  scene: [GameScene],
 };
 
 const game = new Phaser.Game(config);
 
 setTimeout(() => {
-  game.scene.pause("merge-game");
+  game.scene.pause("scene-game");
 }, 100);
 
 // Start Button Handler
 gameStartBtn.addEventListener("click", () => {
   gameStartDiv.style.display = "none";
-  game.scene.resume("merge-game");
+  game.scene.resume("scene-game");
 });
 
-// Try Again Button Handler
+// Try Again Button Handler - FIXED FREEZE
 gameEndBtn.addEventListener("click", () => {
+  // 1. Hide the End Game UI overlay
   gameEndDiv.style.display = "none";
-  const currentScene = game.scene.keys["merge-game"];
+  
+  // 2. Safely grab the active game scene instance
+  const currentScene = game.scene.keys["scene-game"];
   
   if (currentScene) {
-    game.scene.resume("merge-game");
+    // 3. Force resume FIRST so the engine updates its internal loop state
+    game.scene.resume("scene-game");
+    
+    // 4. Trigger the fresh scene wipe and restart
     currentScene.scene.restart();
   }
 });
+
+const installBtn = document.querySelector("#installBtn");
+
+installBtn.addEventListener("click", () => {
+  alert("Store page would open here");
+});
+

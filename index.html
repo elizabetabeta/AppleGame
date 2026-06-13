@@ -1,42 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <link rel="stylesheet" href="./style.css">
-  <title>Merge Game</title>
-</head>
-<body>
-  <div class="container">
-    <canvas id="gameCanvas"></canvas>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.ico" />
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.0/dist/confetti.browser.min.js"></script>
+    <script src="https://kit.fontawesome.com/40e4cc9236.js" crossorigin="anonymous"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="true">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Apple Catcher</title>
+  </head>
+  <body>
+    <header>
+      <p>Phaser Demo | Apple Catcher</p>
+    </header>
+    <main>
+      <canvas id="gameCanvas"></canvas>
+      <div id="gameStartDiv" class="gameUI">
+        <h1>Apple Catcher <i class="fa-solid fa-apple-whole"></i> </h1>
+        <p>You have 30 seconds to catch apples!</p>
+        <p>If you catch more than 10 apples you win.</p>
+        <p>If you catch less than 10 apples you lose.</p>
+        <p>Click the start button to begin</p>
+        <button id="gameStartBtn"><p>start</p></button>
+      </div>
+      <div id="gameEndDiv" class="gameUI">
+        <p>Game Over</p>
+        <h1>You <span id="gameWinLoseSpan"></span></h1>
+        <h1>Final Score: <span id="gameEndScoreSpan"></span></h1>
 
-    <!-- Start Screen -->
-    <div id="gameStartDiv">
-      <h1>🎮 MERGE GAME</h1>
-      <p>
-        Click on tiles to select them. Click another tile to merge (if same level) or swap positions!
-        <br><br>
-        Merge tiles to reach level 7 and WIN!
-        <br>
-        Run out of space and it's GAME OVER!
-        <br><br>
-        Click the egg 🥚 to spawn more tiles!
-      </p>
-      <button id="gameStartBtn">START GAME</button>
-    </div>
+        <button id="installBtn">
+          <p>Install Now</p>
+        </button>
 
-    <!-- End Screen -->
-    <div id="gameEndDiv">
-      <h2 id="gameWinLoseSpan">Win!</h2>
-      <div class="score-display">Final Score: <span id="gameEndScoreSpan">0</span></div>
-      <button id="gameEndBtn">TRY AGAIN</button>
-    </div>
-  </div>
-
-  <!-- Canvas Confetti Library -->
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.0/dist/confetti.browser.min.js"></script>
-
-  <!-- Your game script -->
-  <script type="module" src="./main.js"></script>
-</body>
+        <button id="gameEndBtn">
+          <p>Try Again</p>
+        </button>
+      </div>
+    </main>
+    <footer>
+      <p>Created By Beta 2026 <i class="fa-solid fa-heart"></i></p>
+    </footer>
+    <script type="module" src="/main.js"></script>
+  </body>
 </html>
